@@ -113,7 +113,7 @@ h2 .num{font-size:17px;color:var(--muted);font-weight:500}
 .fab:active{transform:scale(.94)}
 nav.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);
   padding-bottom:env(safe-area-inset-bottom,0px);z-index:15}
-nav.tabs .in{max-width:480px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr)}
+nav.tabs .in{max-width:480px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr)}
 nav.tabs button{padding:10px 0 12px;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:12px;font-weight:600;color:var(--muted)}
 nav.tabs button svg{width:24px;height:24px}
 nav.tabs button[aria-current="page"]{color:var(--green)}
@@ -160,6 +160,24 @@ nav.tabs button[aria-current="page"]{color:var(--green)}
 .toast.show{opacity:1;transform:translateX(-50%)}
 .hidden{display:none!important}
 .sync{font-size:12px;color:var(--muted)}
+.period-sel{width:100%;padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:var(--surface);font-weight:600;margin:6px 0 14px}
+.btn-row{display:grid;grid-template-columns:1fr;gap:8px;margin:6px 0 18px}
+.btn.warn{background:var(--gold);color:#18262B}
+#printArea{display:none}
+@media print{
+  body{background:#fff!important;color:#000!important}
+  body>*:not(#printArea){display:none!important}
+  #printArea{display:block!important;font-family:Manrope,Arial,sans-serif;color:#000;padding:0;font-size:12px}
+  #printArea h1{font-size:20px;margin:0 0 2px}
+  #printArea .pdates{color:#444;margin:0 0 14px}
+  #printArea table{width:100%;border-collapse:collapse;margin:6px 0 16px}
+  #printArea th,#printArea td{border-bottom:1px solid #ccc;padding:5px 4px;text-align:left;vertical-align:top}
+  #printArea th{background:#eee}
+  #printArea td.r,#printArea th.r{text-align:right;white-space:nowrap}
+  #printArea h2{font-size:14px;margin:14px 0 4px}
+  #printArea .tot td{font-weight:700;border-top:2px solid #000}
+  @page{margin:14mm}
+}
 @media (prefers-reduced-motion:reduce){.sheet,.toast{transition:none}}
 </style>
 </head>
@@ -173,7 +191,7 @@ nav.tabs button[aria-current="page"]{color:var(--green)}
   <!-- HOME -->
   <section id="v-home">
     <div class="left">
-      <div class="label">Left to spend this month</div>
+      <div class="label" id="leftLabel">Left to spend this month</div>
       <div class="big num" id="leftBig">0</div>
       <div class="bar" aria-hidden="true"><span class="b-fixed" id="barFixed"></span><span class="b-spent" id="barSpent"></span></div>
       <div class="legend">
@@ -219,6 +237,14 @@ nav.tabs button[aria-current="page"]{color:var(--green)}
     <div class="list" id="rpCats"></div>
   </section>
 
+  <!-- HISTORY -->
+  <section id="v-history" class="hidden">
+    <select class="period-sel" id="hsPeriod" aria-label="Choose period"></select>
+    <div class="summary" id="hsSummary"></div>
+    <div class="btn-row"><button class="btn" id="hsPrint">Print or save as PDF</button></div>
+    <div id="hsList"></div>
+  </section>
+
   <!-- SETTINGS -->
   <section id="v-settings" class="hidden">
     <label class="field"><span>Monthly income</span><input id="stIncome" inputmode="decimal" placeholder="0"></label>
@@ -233,6 +259,9 @@ nav.tabs button[aria-current="page"]{color:var(--green)}
     <h2 style="margin-top:18px">Categories</h2>
     <div class="chips" id="stCats"></div>
     <p class="sync" id="syncNote"></p>
+    <h2 style="margin-top:22px">New period</h2>
+    <p style="color:var(--muted);font-size:14px;margin:-4px 0 10px">Puts the home screen back to 0 and resets the “paid” ticks. Everything so far is kept in History.</p>
+    <button class="btn warn" id="stNewPeriod">Start new period</button>
     <h2 style="margin-top:22px">Backup</h2>
     <button class="btn soft" id="stExport">Download backup</button>
     <button class="btn soft" id="stImportBtn">Restore from backup</button>
@@ -247,6 +276,7 @@ nav.tabs button[aria-current="page"]{color:var(--green)}
   <button data-tab="home" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 11l8-7 8 7v9a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1z"/></svg>Today</button>
   <button data-tab="fixed"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg>Fixed</button>
   <button data-tab="report"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 20V10M12 20V4M19 20v-7"/></svg>Report</button>
+  <button data-tab="history"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg>History</button>
   <button data-tab="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Settings</button>
 </div></nav>
 
@@ -310,6 +340,7 @@ nav.tabs button[aria-current="page"]{color:var(--green)}
 </div>
 
 <div class="toast" id="toast" role="status"></div>
+<div id="printArea"></div>
 
 <script>
 (function(){
@@ -388,6 +419,30 @@ async function connectDb(){
   }catch(e){ profileRef=null; expCol=null; $("#syncNote").textContent="Saved on this phone. Use Download backup regularly."; }
 }
 
+/* ---------- periods ---------- */
+// A period runs from its start time until the next one starts. Before any manual period exists, the current calendar month is used.
+const periodStart = () => S.settings.periodStart || new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime();
+const paidKey = () => S.settings.periodStart ? "p"+S.settings.periodStart : monthKey(new Date());
+const inRange = (e,a,b) => (e.ts||0)>=a && (e.ts||0)<b;
+const curEntries = () => { const a=periodStart(); return S.expenses.filter(e=>(e.ts||0)>=a); };
+function totalsOf(list){
+  const spent=list.filter(e=>e.kind!=="income").reduce((x,e)=>x+e.amount,0);
+  const moneyIn=list.filter(e=>e.kind==="income").reduce((x,e)=>x+e.amount,0);
+  return {spent,moneyIn};
+}
+function currentSummary(){
+  const list=curEntries(), t=totalsOf(list);
+  const income=(S.settings.income||0)+t.moneyIn, fixed=fixedTotal();
+  const paid=S.settings.paid[paidKey()]||[];
+  return {start:periodStart(),end:null,salary:S.settings.income||0,moneyIn:t.moneyIn,income,fixed,spent:t.spent,left:income-fixed-t.spent,
+    fixedItems:S.settings.fixed.map(f=>({name:f.name,amount:f.amount,paid:paid.includes(f.id)})),list};
+}
+function archivedSummary(p){
+  const list=S.expenses.filter(e=>inRange(e,p.start,p.end));
+  return Object.assign({},p,{list});
+}
+const fmtDate = ts => new Date(ts).toLocaleDateString(undefined,{day:"numeric",month:"short",year:"numeric"});
+
 /* ---------- calculations ---------- */
 function monthExp(key){ return S.expenses.filter(e=>e.date && e.date.slice(0,7)===key); }
 function spentIn(key){ return monthExp(key).filter(e=>e.kind!=="income").reduce((a,e)=>a+e.amount,0); }
@@ -407,11 +462,9 @@ function expenseRow(e){
 }
 
 function renderHome(){
-  const mk=monthKey(new Date());
-  const income = (S.settings.income||0) + incomeIn(mk);
-  const fixed = fixedTotal();
-  const spent = spentIn(mk);
-  const left = income - fixed - spent;
+  const cs=currentSummary();
+  const income=cs.income, fixed=cs.fixed, spent=cs.spent, left=cs.left;
+  $("#leftLabel").textContent = S.settings.periodStart ? "Left to spend this period" : "Left to spend this month";
   const big=$("#leftBig");
   big.innerHTML = esc(fmt(left))+`<span class="cur">${esc(S.settings.currency)}</span>`;
   big.classList.toggle("neg", left<0);
@@ -421,7 +474,8 @@ function renderHome(){
   $("#lgFixed").textContent=fmt(fixed); $("#lgSpent").textContent=fmt(spent); $("#lgIncome").textContent=fmt(income);
 
   const t=todayKey();
-  const today=S.expenses.filter(e=>e.date===t).sort((a,b)=>(b.ts||0)-(a.ts||0));
+  const ps=periodStart();
+  const today=S.expenses.filter(e=>e.date===t && (e.ts||0)>=ps).sort((a,b)=>(b.ts||0)-(a.ts||0));
   const tSpent=today.filter(e=>e.kind!=="income").reduce((a,e)=>a+e.amount,0);
   $("#todayTotal").textContent = tSpent?"−"+money(tSpent):"";
   $("#todayList").innerHTML = today.length ? today.map(expenseRow).join("") :
@@ -431,7 +485,7 @@ function renderHome(){
   let html="";
   for(let i=1;i<=6;i++){
     const d=new Date(); d.setDate(d.getDate()-i); const k=dayKey(d);
-    const items=S.expenses.filter(e=>e.date===k).sort((a,b)=>(b.ts||0)-(a.ts||0));
+    const items=S.expenses.filter(e=>e.date===k && (e.ts||0)>=ps).sort((a,b)=>(b.ts||0)-(a.ts||0));
     if(items.length) html+=`<div class="day-h">${esc(dayLabel(k))}</div><div class="list">${items.map(expenseRow).join("")}</div>`;
   }
   $("#earlier").innerHTML=html;
@@ -448,7 +502,7 @@ function renderHome(){
 }
 
 function renderFixed(){
-  const mk=monthKey(new Date()); const paid=S.settings.paid[mk]||[];
+  const paid=S.settings.paid[paidKey()]||[];
   const list=[...S.settings.fixed].sort((a,b)=>(a.day||99)-(b.day||99));
   $("#fxTotal").textContent=money(fixedTotal());
   $("#fxDue").textContent=money(list.filter(f=>!paid.includes(f.id)).reduce((a,f)=>a+f.amount,0));
@@ -488,19 +542,74 @@ function renderSettings(){
   $("#stCats").innerHTML = S.settings.cats.map(c=>`<span class="chip">${c.ico} ${esc(c.name)}</span>`).join("") + `<button class="chip" id="addCatBtn">+ New category</button>`;
 }
 
+let hsSel="current";
+function selectedSummary(){
+  if(hsSel==="current") return currentSummary();
+  const p=(S.settings.periods||[]).find(x=>x.id===hsSel);
+  if(!p){ hsSel="current"; return currentSummary(); }
+  return archivedSummary(p);
+}
+function renderHistory(){
+  const ps=(S.settings.periods||[]).slice().sort((a,b)=>b.start-a.start);
+  const opts=[`<option value="current">Current period (since ${esc(fmtDate(periodStart()))})</option>`]
+    .concat(ps.map(p=>`<option value="${esc(p.id)}">${esc(fmtDate(p.start))} → ${esc(fmtDate(p.end))}</option>`));
+  const sel=$("#hsPeriod"); sel.innerHTML=opts.join(""); sel.value=hsSel;
+  const s=selectedSummary();
+  $("#hsSummary").innerHTML=`<div><small>Income</small><span class="num">${fmt(s.income)}</span></div>
+    <div><small>Fixed</small><span class="num">${fmt(s.fixed)}</span></div>
+    <div><small>Spent</small><span class="num">${fmt(s.spent)}</span></div>
+    <div><small>Balance</small><span class="num" style="color:${s.left<0?"var(--red)":"var(--green)"}">${fmt(s.left)}</span></div>`;
+  const days={};
+  s.list.forEach(e=>{ (days[e.date]=days[e.date]||[]).push(e); });
+  const keys=Object.keys(days).sort().reverse();
+  $("#hsList").innerHTML = keys.length ? keys.map(k=>`<div class="day-h">${esc(dayLabel(k))}</div><div class="list">${days[k].sort((a,b)=>(b.ts||0)-(a.ts||0)).map(expenseRow).join("")}</div>`).join("")
+    : `<div class="list"><div class="empty"><b>Nothing in this period</b>Expenses you add will be listed here.</div></div>`;
+}
+$("#hsPeriod").addEventListener("change",e=>{ hsSel=e.target.value; renderHistory(); });
+
+function buildPrint(s){
+  const cur=S.settings.currency;
+  const rows=s.list.slice().sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:(a.ts||0)-(b.ts||0)).map(e=>{
+    const inc=e.kind==="income", gap=e.kind==="gap", c=catById(e.cat);
+    const what=inc?(e.note||"Money in"):gap?"Unrecorded spending":(e.note||c.name);
+    const cat=inc?"Income":gap?"Unrecorded":c.name;
+    const [y,m,d]=e.date.split("-");
+    return `<tr><td>${d}/${m}/${y}</td><td>${esc(what)}</td><td>${esc(cat)}</td><td class="r">${inc?"+":"−"}${fmt(e.amount)}</td></tr>`;
+  }).join("");
+  const by={}; s.list.filter(e=>e.kind!=="income").forEach(e=>{ const n=e.kind==="gap"?"Unrecorded":catById(e.cat).name; by[n]=(by[n]||0)+e.amount; });
+  const cats=Object.entries(by).sort((a,b)=>b[1]-a[1]).map(([n,v])=>`<tr><td>${esc(n)}</td><td class="r">${fmt(v)}</td><td class="r">${s.spent?Math.round(v/s.spent*100):0}%</td></tr>`).join("");
+  const fx=(s.fixedItems||[]).map(f=>`<tr><td>${esc(f.name)}</td><td>${f.paid?"Paid":"Not paid"}</td><td class="r">${fmt(f.amount)}</td></tr>`).join("");
+  $("#printArea").innerHTML=`<h1>Spent – balance and history</h1>
+    <p class="pdates">Period: ${esc(fmtDate(s.start))} → ${s.end?esc(fmtDate(s.end)):"today ("+esc(fmtDate(Date.now()))+")"} · Amounts in ${esc(cur)}</p>
+    <h2>Balance</h2>
+    <table>
+      <tr><td>Monthly income</td><td class="r">${fmt(s.salary||0)}</td></tr>
+      <tr><td>Other money in</td><td class="r">${fmt(s.moneyIn||0)}</td></tr>
+      <tr><td>Fixed expenses</td><td class="r">−${fmt(s.fixed)}</td></tr>
+      <tr><td>Daily spending</td><td class="r">−${fmt(s.spent)}</td></tr>
+      <tr class="tot"><td>Balance</td><td class="r">${fmt(s.left)} ${esc(cur)}</td></tr>
+    </table>
+    ${fx?`<h2>Fixed expenses</h2><table><tr><th>Name</th><th>Status</th><th class="r">Amount</th></tr>${fx}</table>`:""}
+    ${cats?`<h2>Spending by category</h2><table><tr><th>Category</th><th class="r">Amount</th><th class="r">Share</th></tr>${cats}</table>`:""}
+    <h2>All entries</h2>
+    ${rows?`<table><tr><th>Date</th><th>What</th><th>Category</th><th class="r">Amount</th></tr>${rows}</table>`:"<p>No entries in this period.</p>"}
+    <p class="pdates">Printed ${esc(fmtDate(Date.now()))}</p>`;
+}
+$("#hsPrint").addEventListener("click",()=>{ buildPrint(selectedSummary()); setTimeout(()=>window.print(),50); });
+
 function renderAll(){
   $$(".curLbl").forEach(el=>el.textContent=S.settings.currency);
   $("#monthPill").textContent=monthLabel(monthKey(new Date()));
-  renderHome(); renderFixed(); renderReport(); renderSettings();
+  renderHome(); renderFixed(); renderReport(); renderHistory(); renderSettings();
 }
 
 /* ---------- tabs ---------- */
-const TITLES={home:"Today",fixed:"Fixed expenses",report:"Report",settings:"Settings"};
+const TITLES={home:"Today",fixed:"Fixed expenses",report:"Report",history:"History",settings:"Settings"};
 function showTab(t){
-  ["home","fixed","report","settings"].forEach(k=>$("#v-"+k).classList.toggle("hidden",k!==t));
+  ["home","fixed","report","history","settings"].forEach(k=>$("#v-"+k).classList.toggle("hidden",k!==t));
   $$("nav.tabs button").forEach(b=>b.setAttribute("aria-current", b.dataset.tab===t?"page":"false"));
   $("#title").textContent=TITLES[t];
-  $("#fab").classList.toggle("hidden", t==="settings");
+  $("#fab").classList.toggle("hidden", t==="settings"||t==="history");
   window.scrollTo(0,0);
 }
 $$("nav.tabs button").forEach(b=>b.addEventListener("click",()=>showTab(b.dataset.tab)));
@@ -656,7 +765,7 @@ $("#fxSave").addEventListener("click",()=>{
 $("#fxDelete").addEventListener("click",()=>{ if(!confirm("Delete this fixed expense?")) return; S.settings.fixed=S.settings.fixed.filter(x=>x.id!==fxEditing); persistSettings(); closeSheet("fixed"); renderAll(); toast("Deleted"); });
 $("#fixedList").addEventListener("click",e=>{
   const p=e.target.closest("[data-pay]");
-  if(p){ const mk=monthKey(new Date()); const arr=(S.settings.paid[mk]||[]).slice(); const i=arr.indexOf(p.dataset.pay);
+  if(p){ const mk=paidKey(); const arr=(S.settings.paid[mk]||[]).slice(); const i=arr.indexOf(p.dataset.pay);
     if(i>=0) arr.splice(i,1); else arr.push(p.dataset.pay);
     S.settings.paid=Object.assign({},S.settings.paid,{[mk]:arr}); persistSettings(); renderAll(); return; }
   const f=e.target.closest("[data-fx]"); if(f){ const x=S.settings.fixed.find(z=>z.id===f.dataset.fx); if(x) openFixed(x); }
@@ -687,6 +796,18 @@ $("#stReset").addEventListener("click",async()=>{
   if(expCol){ for(const id of ids){ try{ await expCol.doc(id).delete(); }catch(e){} } }
   if(profileRef){ try{ await profileRef.delete(); }catch(e){} }
   applyTheme(); renderAll(); showTab("home"); openSheet("setup");
+});
+
+/* New period */
+$("#stNewPeriod").addEventListener("click",()=>{
+  const cs=currentSummary();
+  const msg=`Start a new period?\n\nThis period (since ${fmtDate(cs.start)}) will be saved in History with a balance of ${money(cs.left)}.\n\nThe home screen will go back to 0 and the “paid” ticks will reset. Nothing is deleted.`;
+  if(!confirm(msg)) return;
+  const now=Date.now();
+  const rec={id:uid(),start:cs.start,end:now,salary:cs.salary,moneyIn:cs.moneyIn,income:cs.income,fixed:cs.fixed,spent:cs.spent,left:cs.left,fixedItems:cs.fixedItems};
+  S.settings.periods=(S.settings.periods||[]).concat([rec]);
+  S.settings.periodStart=now;
+  persistSettings(); hsSel="current"; renderAll(); showTab("home"); toast("New period started");
 });
 
 /* Backup */
